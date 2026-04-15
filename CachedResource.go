@@ -22,7 +22,7 @@ type cachedResourceMetadata struct {
 
 type cachedResource struct {
 	InvalidationPolicy func(*http.Request, cachedResourceMetadata) bool
-	AcquisitionPolicy  func(*http.Request) (any, error)
+	AcquisitionPolicy  func(w http.ResponseWriter, r *http.Request, m map[string]any) (any, error)
 
 	fingerprint []string
 	cache       map[string]cachedResourceMetadata
@@ -53,7 +53,7 @@ type QueryCachedResourceOptions struct {
 
 	// this function will take the request data and return the resource that
 	// should be cached.
-	AcquisitionPolicy func(*http.Request) (any, error)
+	AcquisitionPolicy func(w http.ResponseWriter, r *http.Request, m map[string]any) (any, error)
 }
 
 // This is a request aware bridge which is able to cache resources based on
@@ -126,7 +126,7 @@ func (c cachedResource) Data(w http.ResponseWriter, r *http.Request, model map[s
 		defer c.cacheMutex.Unlock()
 		defer func() { <-c.concurrency }()
 
-		res, err := c.AcquisitionPolicy(r)
+		res, err := c.AcquisitionPolicy(w, r, model)
 		if err != nil {
 			// the resource could not be retrieved, so we will return nil and the error.
 			logger.Error("Failed to acquire resource", "error", err)
